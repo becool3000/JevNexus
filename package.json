@@ -15,10 +15,15 @@
     "verify": "node src/cli.mjs verify",
     "warm:start": "node src/server.mjs",
     "benchmark": "node src/benchmark.mjs",
+    "mcp:start": "node src/mcp-server.mjs",
+    "mcp:smoke": "node src/mcp-smoke.mjs",
+    "benchmark:mcp": "node src/mcp-benchmark.mjs",
     "test": "node --test"
   },
   "dependencies": {
-    "@typesafe-ai/sdk": "0.6.0"
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@typesafe-ai/sdk": "0.6.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "gitnexus": "1.6.12"

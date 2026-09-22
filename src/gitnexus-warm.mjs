@@ -29,10 +29,12 @@ export class WarmGitNexusClient {
 
   async start() {
     try {
-      await this.health();
+      const health = await this.health();
+      this.assertIndexed(health);
       this.files = trackedFiles();
       return;
     } catch (error) {
+      if (error.code === "GITNEXUS_INDEX_UNAVAILABLE") throw error;
       if (!this.autoStart) throw error;
     }
 
@@ -49,15 +51,25 @@ export class WarmGitNexusClient {
     let lastError;
     for (let attempt = 0; attempt < 120; attempt += 1) {
       try {
-        await this.health();
+        const health = await this.health();
+        this.assertIndexed(health);
         this.files = trackedFiles();
         return;
       } catch (error) {
+        if (error.code === "GITNEXUS_INDEX_UNAVAILABLE") throw error;
         lastError = error;
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
     throw new Error(`GitNexus warm service did not become ready at ${this.url}.`, { cause: lastError });
+  }
+
+  assertIndexed(health) {
+    if (!Array.isArray(health?.repos) || !health.repos.includes(this.repo)) {
+      const error = new Error(`GitNexus has no warm index for repository '${this.repo}'. Run npm run index first.`);
+      error.code = "GITNEXUS_INDEX_UNAVAILABLE";
+      throw error;
+    }
   }
 
   async status() {
@@ -82,7 +94,16 @@ export class WarmGitNexusClient {
       signal: AbortSignal.timeout(30000),
     });
     const body = await response.text();
-    if (!response.ok) throw new Error(`GitNexus warm query failed with HTTP ${response.status}: ${body}`);
+    if (!response.ok) {
+      const error = new Error(`GitNexus warm query failed with HTTP ${response.status}.`);
+      if (/not indexed|run .*gitnexus analyze|no indexed repositories/i.test(body)) error.code = "GITNEXUS_INDEX_STALE";
+      throw error;
+    }
+    if (/not indexed|run .*gitnexus analyze|no indexed repositories/i.test(body)) {
+      const error = new Error("GitNexus returned an uninitialized or stale index response.");
+      error.code = "GITNEXUS_INDEX_STALE";
+      throw error;
+    }
     return body;
   }
 
