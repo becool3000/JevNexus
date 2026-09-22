@@ -117,6 +117,16 @@ The benchmark reports:
 
 The warm path is intended to remove the repeated GitNexus process/database initialization cost. Decision quality is intentionally out of scope for this slice.
 
+Measured on 2026-09-22 with the local JevNexus repository and one `choice` decision:
+
+| Path | Client end-to-end | GitNexus query | Reducer | Jev | Jev input tokens |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Cold current path | 27,334 ms | 1,682 ms | 0.4 ms | 400 ms | 1,213 |
+| Warm first request | 1,483 ms | 1,201 ms | 0.2 ms | 211 ms | 953 |
+| Warm repeated average (3) | 455 ms | ~323 ms | 0.02 ms | ~126 ms | 953 |
+
+The cold run spent approximately 25,078 ms in GitNexus status/process initialization. The warm daemon removed that repeated initialization. The cold reducer saw approximately 32,704 context characters and reduced them to 1,791 characters for Jev; the default Codex response exposed none of that repository context. Warm queries in this small repository returned less raw text because the persistent eval-server formatter omits unnecessary source detail, while the reducer contract remained unchanged.
+
 ## Modules
 
 - `src/gitnexus.mjs`: cold CLI adapter.
