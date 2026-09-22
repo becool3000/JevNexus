@@ -4,7 +4,7 @@ const MAX_FILES = 40;
 function compactStatus(status) {
   const data = status?.data ?? status;
   return {
-    indexed: Boolean(data?.indexed ?? data?.exists ?? data?.status === "ready" ?? data?.status === "up-to-date"),
+    indexed: Boolean(data?.indexed ?? data?.exists ?? (data?.status === "ready" || data?.status === "up-to-date")),
     repo: data?.repo ?? data?.name ?? data?.repository ?? null,
     symbols: data?.symbols ?? data?.symbolCount ?? null,
     relationships: data?.relationships ?? data?.relationshipCount ?? null,
