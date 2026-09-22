@@ -1,0 +1,4 @@
+node_modules/
+.gitnexus/
+.env
+artifacts/

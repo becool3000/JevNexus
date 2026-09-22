@@ -1,0 +1,24 @@
+{
+  "name": "jev-nexus",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "index": "gitnexus analyze --index-only",
+    "index:force": "gitnexus analyze --index-only --force",
+    "repo:status": "gitnexus status --json",
+    "repo:query": "node src/cli.mjs query",
+    "decide": "node src/cli.mjs decide",
+    "verify": "node src/cli.mjs verify",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "0.6.0"
+  },
+  "devDependencies": {
+    "gitnexus": "1.6.12"
+  }
+}
