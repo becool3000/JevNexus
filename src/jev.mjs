@@ -1,21 +1,27 @@
-import { choice, noul, TypeSafeClient } from "@typesafe-ai/sdk";
+import { choice, noul, score, TypeSafeClient } from "@typesafe-ai/sdk";
 import { jevModel, requireApiKey } from "./config.mjs";
+import {
+  normalizeChoiceCriteria,
+  normalizeDecisionType,
+  normalizeNoulCriteria,
+  normalizeScoreCriteria,
+} from "./decision-spec.mjs";
 
-export async function decide(state) {
+export function buildQuestion(question, choices, decisionType) {
+  const type = normalizeDecisionType(decisionType, choices !== undefined);
+  if (type === "choice") return choice(question, normalizeChoiceCriteria(choices));
+  if (type === "score") return score(question, normalizeScoreCriteria(choices));
+  return noul(question, normalizeNoulCriteria(choices));
+}
+
+export async function decide(state, { question, choices, decisionType } = {}) {
   requireApiKey();
   const client = new TypeSafeClient({ defaultModel: jevModel });
   return client.systemOne({
     model: jevModel,
     state,
     questions: {
-      next_action: choice("Which bounded action should Codex take next for this repository task?", {
-        inspect_gitnexus_adapter: "Inspect or improve the GitNexus adapter/context reducer.",
-        inspect_jev_adapter: "Inspect or improve the Jev adapter or decision contract.",
-        run_tests: "Run the repository's tests or verification command.",
-        ask_codex_for_deeper_reasoning: "The evidence is insufficient; Codex should reason more deeply.",
-        no_action: "The current evidence is sufficient and no further action is needed.",
-      }),
-      needs_more_context: noul("Is more repository context needed before taking a bounded next action?"),
+      decision: buildQuestion(question, choices, decisionType),
     },
   });
 }

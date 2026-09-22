@@ -24,6 +24,15 @@ function compactQuery(queryResult) {
   };
 }
 
+export function compactContextPreview(state) {
+  return {
+    task: state.task,
+    gitnexus: state.gitnexus,
+    repository: state.repository,
+    searchEvidence: state.searchEvidence,
+  };
+}
+
 export function reduceContext({ question, status, queryResult, files }) {
   return {
     task: question,

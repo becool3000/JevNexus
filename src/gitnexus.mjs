@@ -44,3 +44,7 @@ export function trackedFiles() {
     .split(/\r?\n/)
     .filter(Boolean);
 }
+
+export function createColdSource() {
+  return { kind: "cold-cli", warm: false, status, query, trackedFiles };
+}

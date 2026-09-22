@@ -6,12 +6,20 @@ function arg(name, fallback) {
   return index === -1 ? fallback : process.argv[index + 1] ?? fallback;
 }
 
+function jsonArg(name) {
+  const value = arg(name, undefined);
+  return value === undefined ? undefined : JSON.parse(value);
+}
+
 async function main() {
   const command = process.argv[2] || "verify";
   const question = arg("--question", defaultQuery);
+  const decisionType = arg("--decision-type", command === "verify" ? "choice" : undefined);
+  const choices = jsonArg("--choices-json");
+  const debug = process.argv.includes("--debug");
 
   if (command === "query") {
-    const result = collectContext(question);
+    const result = await collectContext(question);
     console.log(JSON.stringify(result, null, 2));
     return;
   }
@@ -20,7 +28,7 @@ async function main() {
     throw new Error(`Unknown command: ${command}`);
   }
 
-  console.log(JSON.stringify(await repoDecide(question), null, 2));
+  console.log(JSON.stringify(await repoDecide(question, choices, decisionType, { includeContext: debug }), null, 2));
 }
 
 main().catch((error) => {
