@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import path from "node:path";
-import { repoRoot } from "./config.mjs";
+import { packageRoot, repoRoot } from "./config.mjs";
 
 const question = "Which bounded action should Codex take next for the repository decision harness?";
 const choices = {
@@ -14,7 +14,7 @@ const choices = {
 function coldDecision() {
   const started = performance.now();
   const result = spawnSync(process.execPath, [
-    path.join(repoRoot, "src", "cli.mjs"),
+    path.join(packageRoot, "src", "cli.mjs"),
     "decide",
     "--question", question,
     "--decision-type", "choice",
@@ -72,7 +72,7 @@ function summary(samples) {
 
 async function main() {
   const cold = coldDecision();
-  const warmServer = spawn(process.execPath, [path.join(repoRoot, "src", "server.mjs")], {
+  const warmServer = spawn(process.execPath, [path.join(packageRoot, "src", "server.mjs")], {
     cwd: repoRoot,
     env: { ...process.env, JEVNEXUS_PORT: "4850", GITNEXUS_EVAL_PORT: "4851" },
     stdio: ["ignore", "pipe", "pipe"],

@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { repoRoot } from "./config.mjs";
+import { packageRoot, repoRoot } from "./config.mjs";
 import { trackedFiles } from "./gitnexus.mjs";
 
 const DEFAULT_PORT = 4848;
@@ -39,7 +39,7 @@ export class WarmGitNexusClient {
     }
 
     const port = new URL(this.url).port || String(DEFAULT_PORT);
-    const localCli = path.join(repoRoot, "node_modules", "gitnexus", "dist", "cli", "index.js");
+    const localCli = path.join(packageRoot, "node_modules", "gitnexus", "dist", "cli", "index.js");
     if (!fs.existsSync(localCli)) throw new Error(`Local GitNexus CLI not found at ${localCli}.`);
     this.child = spawn(process.execPath, [localCli, "eval-server", "--host", "127.0.0.1", "--port", port], {
       cwd: repoRoot,

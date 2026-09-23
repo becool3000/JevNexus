@@ -69,6 +69,25 @@ enabled_tools = ["repo_decide"]
 
 `env_vars` forwards the existing key to the child process without putting the secret in the MCP response, source tree, or configuration file. Run `npm run mcp:start` directly when debugging the stdio server; normal Codex use starts one process and keeps it alive for repeated calls.
 
+For another repository, configure a project-local MCP override and set
+`JEVNEXUS_REPO_ROOT` to that checkout. The server code/dependencies remain in
+the JevNexus installation; GitNexus status, queries, and tracked-file context
+use the selected repository. Keep the original global `jevnexus` entry
+unchanged so its project chat continues to target JevNexus.
+
+```toml
+[mcp_servers.jevnexus]
+command = 'C:\Program Files\nodejs\node.exe'
+args = ['D:\JevNexus\src\mcp-server.mjs']
+cwd = 'D:\YourProject'
+env = { JEVNEXUS_REPO_ROOT = 'D:\YourProject' }
+env_vars = ["TYPESAFE_API_KEY"]
+startup_timeout_sec = 60
+tool_timeout_sec = 60
+enabled = true
+enabled_tools = ["repo_decide"]
+```
+
 ### Tool schema
 
 The server currently exposes one tool:

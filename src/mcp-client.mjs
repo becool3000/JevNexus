@@ -1,12 +1,12 @@
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { repoRoot } from "./config.mjs";
+import { packageRoot, repoRoot } from "./config.mjs";
 
 export async function connectMcpClient({ stderr = "pipe", env = {} } = {}) {
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [path.join(repoRoot, "src", "mcp-server.mjs")],
+    args: [path.join(packageRoot, "src", "mcp-server.mjs")],
     cwd: repoRoot,
     env: Object.fromEntries(Object.entries({ ...process.env, ...env }).filter(([, value]) => value !== undefined)),
     stderr,

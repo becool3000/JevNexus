@@ -1,10 +1,10 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { repoRoot } from "./config.mjs";
+import { packageRoot, repoRoot } from "./config.mjs";
 
 function invocation(args) {
-  const localCli = path.join(repoRoot, "node_modules", "gitnexus", "dist", "cli", "index.js");
+  const localCli = path.join(packageRoot, "node_modules", "gitnexus", "dist", "cli", "index.js");
   if (fs.existsSync(localCli)) return { file: process.execPath, args: [localCli, ...args], shell: false };
   return { file: "gitnexus", args, shell: process.platform === "win32" };
 }
