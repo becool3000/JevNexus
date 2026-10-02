@@ -1,7 +1,8 @@
-import { repoDecide } from "./repo-decide.mjs";
+import { repoDecide, repoEvidence } from "./repo-decide.mjs";
 import { z } from "zod";
 
 export const MCP_TOOL_NAME = "repo_decide";
+export const MCP_EVIDENCE_TOOL_NAME = "repo_evidence";
 
 export const repoDecideInputSchema = {
   question: z.string().min(1),
@@ -11,7 +12,22 @@ export const repoDecideInputSchema = {
   ]).optional(),
   decisionType: z.enum(["choice", "noul", "yes-no", "yes_no", "boolean", "score"]).optional(),
   queryLimit: z.number().int().min(1).max(10).optional(),
+  searchLimit: z.number().int().min(1).max(3).optional(),
+  expansionLimit: z.number().int().min(0).max(6).optional(),
+  graphDepth: z.number().int().min(0).max(1).optional(),
+  maxEvidenceChars: z.number().int().min(1000).max(100000).optional(),
+  recordDiagnostics: z.boolean().optional(),
   debug: z.boolean().optional(),
+};
+
+export const repoEvidenceInputSchema = {
+  question: z.string().min(1),
+  queryLimit: z.number().int().min(1).max(10).optional(),
+  searchLimit: z.number().int().min(1).max(3).optional(),
+  expansionLimit: z.number().int().min(0).max(6).optional(),
+  graphDepth: z.number().int().min(0).max(1).optional(),
+  maxEvidenceChars: z.number().int().min(1000).max(100000).optional(),
+  recordDiagnostics: z.boolean().optional(),
 };
 
 function safeError(error) {
@@ -53,9 +69,37 @@ export function createRepoDecideHandler({ source, decideFn = repoDecide } = {}) 
       const result = await decideFn(args.question, args.choices, args.decisionType, {
         source,
         queryLimit: args.queryLimit,
+        searchLimit: args.searchLimit,
+        expansionLimit: args.expansionLimit,
+        graphDepth: args.graphDepth,
+        maxEvidenceChars: args.maxEvidenceChars,
         includeContext: args.debug === true,
+        recordDiagnostics: args.recordDiagnostics === true,
       });
       return jsonToolResult(result);
+    } catch (error) {
+      return jsonToolResult({ ok: false, error: safeError(error) }, true);
+    }
+  };
+}
+
+export function createRepoEvidenceHandler({ source, evidenceFn = repoEvidence } = {}) {
+  return async function handleRepoEvidence(args = {}) {
+    try {
+      if (typeof args.question !== "string" || !args.question.trim()) {
+        const error = new Error("question must be a non-empty string.");
+        error.code = "INVALID_REQUEST";
+        throw error;
+      }
+      return jsonToolResult(await evidenceFn(args.question, {
+        source,
+        queryLimit: args.queryLimit,
+        searchLimit: args.searchLimit,
+        expansionLimit: args.expansionLimit,
+        graphDepth: args.graphDepth,
+        maxEvidenceChars: args.maxEvidenceChars,
+        recordDiagnostics: args.recordDiagnostics === true,
+      }));
     } catch (error) {
       return jsonToolResult({ ok: false, error: safeError(error) }, true);
     }
@@ -70,6 +114,18 @@ export function registerRepoDecideTool(server, handler) {
       description:
         "Ask Jev to make one small typed decision using bounded GitNexus repository evidence. Repository context is never returned unless debug is true.",
       inputSchema: repoDecideInputSchema,
+    },
+    handler,
+  );
+}
+
+export function registerRepoEvidenceTool(server, handler) {
+  server.registerTool(
+    MCP_EVIDENCE_TOOL_NAME,
+    {
+      title: "JevNexus repository evidence preview",
+      description: "Collect and preview bounded GitNexus evidence without calling Jev. Diagnostics are written locally only when explicitly enabled.",
+      inputSchema: repoEvidenceInputSchema,
     },
     handler,
   );

@@ -3,10 +3,12 @@
 JevNexus is a small repository-decision layer for Codex:
 
 ```text
-Codex → JevNexus MCP (stdio) → repoDecide() → warm GitNexus → bounded context reducer → Jev → typed result
+Codex → JevNexus MCP (stdio) → bounded GitNexus search → symbol context/edges → deterministic evidence selection → Jev
 ```
 
-The MCP server is the Codex-facing boundary. Codex supplies only a narrow question and optional decision parameters. GitNexus and the reducer gather and compress repository evidence inside the MCP process, and the existing Jev adapter produces the typed result. The default result contains only that decision, model, and timing/usage metrics; repository context is returned only with `debug: true`.
+The MCP server is the Codex-facing boundary. It runs bounded searches, expands the strongest candidates through one caller/callee hop, and selects whole evidence blocks deterministically. `repo_evidence` previews that bundle without calling Jev. `repo_decide` sends the same bundle to Jev after confirming that the GitNexus index matches a clean source snapshot. Repository evidence stays private unless `debug: true` is requested.
+
+The default collector uses at most three searches, six symbol-context lookups, one graph hop, and two concurrent requests. Search results are gathered in request order, then candidates are resolved by reciprocal rank and stable symbol ID. The default evidence budget is 24,000 characters (about 9,600 tokens using a conservative 2.5-characters-per-token estimate). The installed TypeSafe SDK does not expose an authoritative model context limit, so this estimate is a planning aid rather than a hard model limit; live Jev calls also report actual token usage.
 
 ## Setup
 
@@ -18,7 +20,7 @@ $env:TYPESAFE_API_KEY = "..."
 npm run index
 ```
 
-`npm run index` creates or refreshes the local `.gitnexus/` graph index. The derived index is ignored by Git. `GITNEXUS_CONTENT_RETENTION` can be used to control GitNexus source retention; this harness still sends only reducer output to Jev.
+`npm run index` creates or refreshes the local `.gitnexus/` graph index. The derived index is ignored by Git. Refresh it after source changes before asking Jev to decide; stale or dirty source snapshots can still be previewed but are refused for a decision.
 
 ## Start the warm service
 
@@ -26,10 +28,10 @@ npm run index
 npm run warm:start
 ```
 
-The project service listens on `127.0.0.1:4850` and automatically starts GitNexus’s warm `eval-server` on port `4848`. To use an already-running GitNexus service instead:
+The project service listens on `127.0.0.1:4850` and starts the GitNexus MCP server as a structured local subprocess. To choose a different JevNexus service port, set `JEVNEXUS_PORT`.
 
 ```powershell
-$env:GITNEXUS_EVAL_SERVER_URL = "http://127.0.0.1:4848"
+$env:JEVNEXUS_PORT = "4851"
 npm run warm:start
 ```
 
@@ -39,9 +41,9 @@ Health check:
 Invoke-RestMethod http://127.0.0.1:4850/health
 ```
 
-The service owns one warm GitNexus process for its lifetime, so repeated decisions do not reinitialize the graph database.
+The service owns one GitNexus MCP process for its lifetime, so repeated decisions reuse the graph process.
 
-The HTTP service remains available for debugging, external clients, and benchmark comparison. The MCP server uses the same warm GitNexus client directly and does not add an HTTP hop between Codex and `repoDecide()`.
+The HTTP service remains available for external clients. It exposes `POST /evidence` for previews and `POST /repo_decide` for decisions.
 
 ## MCP server for Codex
 
@@ -64,7 +66,7 @@ env_vars = ["TYPESAFE_API_KEY"]
 startup_timeout_sec = 60
 tool_timeout_sec = 60
 enabled = true
-enabled_tools = ["repo_decide"]
+enabled_tools = ["repo_decide", "repo_evidence"]
 ```
 
 `env_vars` forwards the existing key to the child process without putting the secret in the MCP response, source tree, or configuration file. Run `npm run mcp:start` directly when debugging the stdio server; normal Codex use starts one process and keeps it alive for repeated calls.
@@ -85,12 +87,12 @@ env_vars = ["TYPESAFE_API_KEY"]
 startup_timeout_sec = 60
 tool_timeout_sec = 60
 enabled = true
-enabled_tools = ["repo_decide"]
+enabled_tools = ["repo_decide", "repo_evidence"]
 ```
 
 ### Tool schema
 
-The server currently exposes one tool:
+The server exposes two tools:
 
 ```text
 repo_decide({
@@ -98,7 +100,22 @@ repo_decide({
   choices?: string[] | Record<string, string | null>,
   decisionType?: "choice" | "noul" | "yes-no" | "yes_no" | "boolean" | "score",
   queryLimit?: integer,                      // optional, 1–10
-  debug?: boolean                            // optional; includes compact reducer preview
+  searchLimit?: integer,                      // optional, 1–3
+  expansionLimit?: integer,                   // optional, 0–6
+  graphDepth?: integer,                       // optional, 0–1
+  maxEvidenceChars?: integer,                 // optional, 1,000–100,000
+  recordDiagnostics?: boolean,                // optional; writes ignored local artifacts
+  debug?: boolean                             // optional; includes selected evidence
+})
+
+repo_evidence({
+  question: string,                           // required; previews evidence without Jev
+  queryLimit?: integer,
+  searchLimit?: integer,
+  expansionLimit?: integer,
+  graphDepth?: integer,
+  maxEvidenceChars?: integer,
+  recordDiagnostics?: boolean
 })
 ```
 
@@ -131,7 +148,7 @@ Default successful output is compact JSON in the MCP text result:
 }
 ```
 
-The `debug` option is the only path that adds a bounded `context` preview. It is intended for reducer diagnostics, not normal Codex operation.
+The `debug` option adds the selected evidence bundle to a decision response. `repo_evidence` always returns the preview and does not call Jev. Diagnostics are opt-in and written under ignored `artifacts/evidence/`; they contain source excerpts, questions, and results, but never API keys.
 
 ## Codex-facing interface
 
@@ -188,7 +205,7 @@ Example response shape:
 }
 ```
 
-Add `"debug": true` only when inspecting the reducer boundary; that adds a compact context preview to the response.
+Use `repo_evidence` to inspect the evidence before spending a Jev call. Use `"debug": true` only when the decision response also needs to include that evidence bundle.
 
 ## Benchmark
 
@@ -236,15 +253,16 @@ The cold run spent approximately 34,845 ms in GitNexus status/process initializa
 
 ## Modules
 
-- `src/gitnexus.mjs`: cold CLI adapter.
-- `src/gitnexus-warm.mjs`: persistent `eval-server` client and lifecycle wrapper.
-- `src/context-reducer.mjs`: bounded, deterministic evidence reducer.
+- `src/gitnexus.mjs`: CLI fallback and clean source-snapshot hashing.
+- `src/gitnexus-mcp.mjs`: structured GitNexus MCP adapter and process lifecycle.
+- `src/evidence-collector.mjs`: bounded Propose → Gather → Resolve collection and one-hop symbol expansion.
+- `src/context-reducer.mjs`: stable evidence ranking, whole-block budget selection, and canonical bundle hash.
 - `src/jev.mjs`: Jev-only typed decision adapter.
-- `src/repo-decide.mjs`: reusable composition and instrumentation boundary.
+- `src/repo-decide.mjs`: preview/decision composition, freshness gate, metrics, and opt-in local diagnostics.
 - `src/server.mjs`: Codex-facing `/repo_decide` service.
 - `src/benchmark.mjs`: cold/warm/repeated-session benchmark.
 - `src/mcp-tool.mjs`: MCP schema, registration, compact response, and safe error adapter.
-- `src/mcp-server.mjs`: local MCP stdio server; owns one warm GitNexus client for its lifetime.
+- `src/mcp-server.mjs`: local MCP stdio server; owns one structured GitNexus MCP client for its lifetime.
 - `src/mcp-client.mjs`: stdio MCP client helper used by verification and benchmarks.
 - `src/mcp-smoke.mjs`: live MCP → GitNexus → reducer → Jev verification for choice/noul/score.
 - `src/mcp-benchmark.mjs`: repeated MCP-session benchmark compared with the warm HTTP reference.

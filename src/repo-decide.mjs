@@ -1,56 +1,94 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { defaultQuery, repoRoot } from "./config.mjs";
-import { compactContextPreview, reduceContext, validateReducedContext } from "./context-reducer.mjs";
-import { createColdSource } from "./gitnexus.mjs";
+import { defaultQuery, packageRoot, repoRoot } from "./config.mjs";
+import { compactContextPreview } from "./context-reducer.mjs";
+import { createColdStructuredSource } from "./gitnexus-mcp.mjs";
+import { collectEvidence } from "./evidence-collector.mjs";
 import { decide } from "./jev.mjs";
 
+function assertCurrentEvidence(collected) {
+  if (collected.state.retrieval.freshness !== "current" || collected.state.retrieval.sourceChangedDuringCollection) {
+    const error = new Error("GitNexus index and source snapshot must match, and the repository must be clean, before Jev can decide.");
+    error.code = "GITNEXUS_INDEX_STALE";
+    throw error;
+  }
+}
+
+async function saveDiagnostic(payload) {
+  const directory = path.join(packageRoot, "artifacts", "evidence");
+  await fs.mkdir(directory, { recursive: true });
+  const name = `${new Date().toISOString().replaceAll(":", "-")}-${randomUUID()}.json`;
+  const target = path.join(directory, name);
+  const temporary = `${target}.tmp`;
+  await fs.writeFile(temporary, `${JSON.stringify(payload, null, 2)}\n`, { flag: "wx" });
+  await fs.rename(temporary, target);
+  return path.relative(packageRoot, target).replaceAll("\\", "/");
+}
+
 export async function collectContext(question = defaultQuery, {
-  source = createColdSource(),
+  source = createColdStructuredSource(),
   queryLimit = 5,
+  searchLimit = 3,
+  expansionLimit = 6,
+  graphDepth = 1,
+  maxEvidenceChars,
 } = {}) {
-  const started = performance.now();
-  const statusStarted = performance.now();
-  const indexStatus = await source.status();
-  const statusMs = performance.now() - statusStarted;
-  const queryStarted = performance.now();
-  const queryResult = await source.query(question, queryLimit);
-  const queryMs = performance.now() - queryStarted;
-  const files = await source.trackedFiles();
-  const rawContext = { question, indexStatus, queryResult, files };
-  const reducerStarted = performance.now();
-  const state = validateReducedContext(reduceContext({
-    question,
-    status: indexStatus,
-    queryResult,
-    files,
-  }));
-  const reducerMs = performance.now() - reducerStarted;
-  const rawContextChars = JSON.stringify(rawContext).length;
-  const reducedStateChars = JSON.stringify(state).length;
-  return {
-    state,
-    metrics: {
-      source: source.kind,
-      warm: Boolean(source.warm),
-      statusMs,
-      gitnexusQueryMs: queryMs,
-      reducerMs,
-      collectionMs: performance.now() - started,
-      rawContextChars,
-      reducedStateChars,
-      contextKeptAwayChars: Math.max(0, rawContextChars - reducedStateChars),
-      trackedFileCount: files.length,
-    },
+  return collectEvidence(question, { source, queryLimit, searchLimit, expansionLimit, graphDepth, maxEvidenceChars });
+}
+
+export async function repoEvidence(question = defaultQuery, {
+  source = createColdStructuredSource(),
+  queryLimit = 5,
+  searchLimit = 3,
+  expansionLimit = 6,
+  graphDepth = 1,
+  maxEvidenceChars,
+  recordDiagnostics = false,
+} = {}) {
+  const collected = await collectContext(question, { source, queryLimit, searchLimit, expansionLimit, graphDepth, maxEvidenceChars });
+  const result = {
+    ok: true,
+    evidenceBundleHash: collected.state.evidenceBundleHash,
+    metrics: collected.metrics,
+    context: compactContextPreview(collected.state),
   };
+  if (recordDiagnostics) {
+    result.diagnosticPath = await saveDiagnostic({
+      kind: "evidence-preview",
+      question,
+      source: collected.raw,
+      selected: collected.state,
+      metrics: collected.metrics,
+    });
+  }
+  return result;
 }
 
 export async function repoDecide(question = defaultQuery, choices, decisionType, {
-  source = createColdSource(),
+  source = createColdStructuredSource(),
   queryLimit = 5,
+  searchLimit = 3,
+  expansionLimit = 6,
+  graphDepth = 1,
+  maxEvidenceChars,
   includeContext = false,
+  recordDiagnostics = false,
 } = {}) {
   const started = performance.now();
-  const collected = await collectContext(question, { source, queryLimit });
+  const collected = await collectContext(question, { source, queryLimit, searchLimit, expansionLimit, graphDepth, maxEvidenceChars });
+  if (recordDiagnostics) {
+    // Preserve retrieval evidence even if freshness validation or Jev later fails.
+    var diagnostic = await saveDiagnostic({
+      kind: "repository-decision-input",
+      question,
+      source: collected.raw,
+      selected: collected.state,
+      metrics: collected.metrics,
+    });
+  }
+  assertCurrentEvidence(collected);
   const decisionStarted = performance.now();
   const response = await decide(collected.state, { question, choices, decisionType });
   const jevMs = performance.now() - decisionStarted;
@@ -60,12 +98,12 @@ export async function repoDecide(question = defaultQuery, choices, decisionType,
     totalMs: performance.now() - started,
     inputTokens: response.usage?.input_tokens ?? null,
     outputTokens: response.usage?.output_tokens ?? null,
-    repositoryContextChars: collected.metrics.rawContextChars,
-    jevInputContextChars: collected.metrics.reducedStateChars,
-    codexVisibleContextChars: includeContext ? collected.metrics.reducedStateChars : 0,
+    repositoryContextChars: collected.metrics.rawEvidenceChars,
+    jevInputContextChars: collected.metrics.selectedEvidenceChars,
+    codexVisibleContextChars: includeContext ? collected.metrics.selectedEvidenceChars : 0,
     contextKeptAwayFromCodexChars: includeContext
-      ? Math.max(0, collected.metrics.rawContextChars - collected.metrics.reducedStateChars)
-      : collected.metrics.rawContextChars,
+      ? Math.max(0, collected.metrics.rawEvidenceChars - collected.metrics.selectedEvidenceChars)
+      : collected.metrics.rawEvidenceChars,
   };
   const result = {
     ok: true,
@@ -74,9 +112,18 @@ export async function repoDecide(question = defaultQuery, choices, decisionType,
     metrics,
   };
   if (includeContext) result.context = compactContextPreview(collected.state);
+  if (diagnostic) {
+    result.diagnosticPath = diagnostic;
+    await saveDiagnostic({
+      kind: "repository-decision-result",
+      question,
+      diagnosticPath: diagnostic,
+      result,
+    });
+  }
   return result;
 }
 
 export function describeArchitecture() {
-  return `Codex -> repo_decide -> warm GitNexus -> bounded reducer -> Jev -> typed result (${repoRoot})`;
+  return `Codex -> repo_decide -> GitNexus structured evidence collector -> deterministic reducer -> Jev (${repoRoot})`;
 }

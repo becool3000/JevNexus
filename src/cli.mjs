@@ -1,5 +1,5 @@
 import { defaultQuery } from "./config.mjs";
-import { collectContext, repoDecide } from "./repo-decide.mjs";
+import { repoDecide, repoEvidence } from "./repo-decide.mjs";
 
 function arg(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -17,9 +17,17 @@ async function main() {
   const decisionType = arg("--decision-type", command === "verify" ? "choice" : undefined);
   const choices = jsonArg("--choices-json");
   const debug = process.argv.includes("--debug");
+  const recordDiagnostics = process.argv.includes("--record-diagnostics");
+  const queryLimit = Number(arg("--query-limit", 5));
+  const searchLimit = Number(arg("--search-limit", 3));
+  const expansionLimit = Number(arg("--expansion-limit", 6));
+  const graphDepth = Number(arg("--graph-depth", 1));
+  const maxEvidenceChars = Number(arg("--max-evidence-chars", 24000));
 
-  if (command === "query") {
-    const result = await collectContext(question);
+  if (command === "query" || command === "evidence" || command === "preview") {
+    const result = await repoEvidence(question, {
+      queryLimit, searchLimit, expansionLimit, graphDepth, maxEvidenceChars, recordDiagnostics,
+    });
     console.log(JSON.stringify(result, null, 2));
     return;
   }
@@ -28,7 +36,10 @@ async function main() {
     throw new Error(`Unknown command: ${command}`);
   }
 
-  console.log(JSON.stringify(await repoDecide(question, choices, decisionType, { includeContext: debug }), null, 2));
+  console.log(JSON.stringify(await repoDecide(question, choices, decisionType, {
+    queryLimit, searchLimit, expansionLimit, graphDepth, maxEvidenceChars,
+    includeContext: debug, recordDiagnostics,
+  }), null, 2));
 }
 
 main().catch((error) => {

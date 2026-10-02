@@ -1,10 +1,10 @@
 import http from "node:http";
-import { repoDecide } from "./repo-decide.mjs";
-import { WarmGitNexusClient } from "./gitnexus-warm.mjs";
+import { repoDecide, repoEvidence } from "./repo-decide.mjs";
+import { GitNexusMcpSource } from "./gitnexus-mcp.mjs";
 
 const host = process.env.JEVNEXUS_HOST || "127.0.0.1";
 const port = Number(process.env.JEVNEXUS_PORT || 4850);
-const gitnexus = new WarmGitNexusClient();
+const gitnexus = new GitNexusMcpSource();
 
 function sendJson(response, status, value) {
   response.writeHead(status, { "content-type": "application/json" });
@@ -35,7 +35,30 @@ const server = http.createServer(async (request, response) => {
       const result = await repoDecide(body.question, body.choices, body.decisionType, {
         source: gitnexus,
         queryLimit: body.queryLimit,
+        searchLimit: body.searchLimit,
+        expansionLimit: body.expansionLimit,
+        graphDepth: body.graphDepth,
+        maxEvidenceChars: body.maxEvidenceChars,
         includeContext: body.debug === true || body.includeContext === true,
+        recordDiagnostics: body.recordDiagnostics === true,
+      });
+      sendJson(response, 200, result);
+      return;
+    }
+    if (request.method === "POST" && request.url === "/evidence") {
+      const body = await readJson(request);
+      if (typeof body.question !== "string" || !body.question.trim()) {
+        sendJson(response, 400, { ok: false, error: "question must be a non-empty string." });
+        return;
+      }
+      const result = await repoEvidence(body.question, {
+        source: gitnexus,
+        queryLimit: body.queryLimit,
+        searchLimit: body.searchLimit,
+        expansionLimit: body.expansionLimit,
+        graphDepth: body.graphDepth,
+        maxEvidenceChars: body.maxEvidenceChars,
+        recordDiagnostics: body.recordDiagnostics === true,
       });
       sendJson(response, 200, result);
       return;
