@@ -60,8 +60,8 @@ Codex launches the local stdio server on demand. The tested local registration i
 ```toml
 [mcp_servers.jevnexus]
 command = 'C:\Program Files\nodejs\node.exe'
-args = ['D:\JevNexus\src\mcp-server.mjs']
-cwd = 'D:\JevNexus'
+args = ['C:\path\to\JevNexus\src\mcp-server.mjs']
+cwd = 'C:\path\to\JevNexus'
 env_vars = ["TYPESAFE_API_KEY"]
 startup_timeout_sec = 60
 tool_timeout_sec = 60
@@ -80,9 +80,9 @@ unchanged so its project chat continues to target JevNexus.
 ```toml
 [mcp_servers.jevnexus]
 command = 'C:\Program Files\nodejs\node.exe'
-args = ['D:\JevNexus\src\mcp-server.mjs']
-cwd = 'D:\YourProject'
-env = { JEVNEXUS_REPO_ROOT = 'D:\YourProject' }
+args = ['C:\path\to\JevNexus\src\mcp-server.mjs']
+cwd = 'C:\path\to\YourProject'
+env = { JEVNEXUS_REPO_ROOT = 'C:\path\to\YourProject' }
 env_vars = ["TYPESAFE_API_KEY"]
 startup_timeout_sec = 60
 tool_timeout_sec = 60
