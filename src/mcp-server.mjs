@@ -9,7 +9,7 @@ const server = new McpServer(
   { name: "jevnexus", version: "0.1.0" },
   {
     instructions:
-      "JevNexus gathers bounded structured GitNexus evidence. Use repo_evidence to preview without Jev, or repo_decide for one focused decision. GitNexus context stays internal unless debug is explicitly true.",
+      "Use repo_decide to ask Jev for one focused, typed recommendation about the configured repository. JevNexus sends the question, choices, and selected repository context to TypeSafe. This requires a valid TYPESAFE_API_KEY, a current GitNexus index, and a clean checkout. Use repo_evidence only to troubleshoot retrieval; debug controls whether selected context is included in the tool response, not whether it is sent to Jev.",
   },
 );
 

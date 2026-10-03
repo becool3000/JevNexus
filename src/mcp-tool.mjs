@@ -39,13 +39,22 @@ function safeError(error) {
   if (error?.code === "GITNEXUS_INDEX_STALE") {
     return { code: error.code, message: "GitNexus needs to be indexed or refreshed before JevNexus can decide." };
   }
+  if (error?.code === "GITNEXUS_REPOSITORY_DIRTY") {
+    return { code: error.code, message: "JevNexus requires a clean repository checkout. Review and preserve your changes, then decide how to clean the checkout before retrying." };
+  }
+  if (error?.code === "GITNEXUS_SOURCE_CHANGED") {
+    return { code: error.code, message: "The repository changed during evidence collection. Review the working tree and retry after it is stable." };
+  }
   if (message.includes("GitNexus") || message.includes("warm service") || message.includes("warm query")) {
     return { code: "GITNEXUS_UNAVAILABLE", message: "GitNexus could not answer the repository query." };
   }
   if (message.includes("Unsupported decisionType") || message.includes("choice decisions") || message.includes("score decisions") || message.includes("noul choices")) {
     return { code: "INVALID_DECISION", message };
   }
-  if (message.includes("TYPESAFE_API_KEY") || error?.name === "TypeSafeError" || error?.statusCode >= 400) {
+  if (message.includes("TYPESAFE_API_KEY")) {
+    return { code: "JEV_API_FAILURE", message: "TYPESAFE_API_KEY is unavailable to JevNexus. Configure it securely for the environment that launches this server, then reload MCP." };
+  }
+  if (error?.name === "TypeSafeError" || error?.statusCode >= 400) {
     return { code: "JEV_API_FAILURE", message: "Jev could not complete the decision." };
   }
   return { code: "JEVNEXUS_FAILURE", message: "JevNexus could not complete the decision." };
@@ -112,7 +121,7 @@ export function registerRepoDecideTool(server, handler) {
     {
       title: "JevNexus repository decision",
       description:
-        "Ask Jev to make one small typed decision using bounded GitNexus repository evidence. Repository context is never returned unless debug is true.",
+        "Ask Jev for a typed recommendation using relevant code from the configured repository. Requires TypeSafe API access. Sends the question, choices, and selected repository context to TypeSafe; returns Jev's decision, model, and usage metrics.",
       inputSchema: repoDecideInputSchema,
     },
     handler,
@@ -123,8 +132,8 @@ export function registerRepoEvidenceTool(server, handler) {
   server.registerTool(
     MCP_EVIDENCE_TOOL_NAME,
     {
-      title: "JevNexus repository evidence preview",
-      description: "Collect and preview bounded GitNexus evidence without calling Jev. Diagnostics are written locally only when explicitly enabled.",
+      title: "JevNexus retrieval diagnostic",
+      description: "Troubleshoot GitNexus retrieval by returning the selected source context without calling Jev. Context is returned to this agent. Diagnostics are written locally only when explicitly enabled.",
       inputSchema: repoEvidenceInputSchema,
     },
     handler,

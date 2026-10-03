@@ -26,6 +26,20 @@ body:
       label: GitNexus version
       description: Include the installed package version if known.
   - type: input
+    id: agent-host
+    attributes:
+      label: Agent host and version
+      placeholder: Codex, Claude Code, Gemini CLI, Cursor, VS Code, or other
+    validations:
+      required: true
+  - type: input
+    id: execution-environment
+    attributes:
+      label: Execution environment
+      description: Local, remote, container, or cloud-hosted agent environment.
+    validations:
+      required: true
+  - type: input
     id: command
     attributes:
       label: Command that failed

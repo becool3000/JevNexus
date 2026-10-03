@@ -9,7 +9,17 @@ import { collectEvidence } from "./evidence-collector.mjs";
 import { decide } from "./jev.mjs";
 
 function assertCurrentEvidence(collected) {
-  if (collected.state.retrieval.freshness !== "current" || collected.state.retrieval.sourceChangedDuringCollection) {
+  if (collected.state.repository.dirty) {
+    const error = new Error("JevNexus decisions require a clean target repository checkout.");
+    error.code = "GITNEXUS_REPOSITORY_DIRTY";
+    throw error;
+  }
+  if (collected.state.retrieval.sourceChangedDuringCollection) {
+    const error = new Error("The repository changed while JevNexus was collecting source evidence. Retry after reviewing the working tree.");
+    error.code = "GITNEXUS_SOURCE_CHANGED";
+    throw error;
+  }
+  if (collected.state.retrieval.freshness !== "current") {
     const error = new Error("GitNexus index and source snapshot must match, and the repository must be clean, before Jev can decide.");
     error.code = "GITNEXUS_INDEX_STALE";
     throw error;

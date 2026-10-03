@@ -1,10 +1,10 @@
-# JevNexus Evidence Collection
+# JevNexus Retrieval Design and Comparison
 
 This document records the collector design and an earlier repository comparison. See [Getting started](GettingStarted.md) for first use and [the tool reference](Reference.md) for MCP and HTTP request details.
 
 ## Advisory use
 
-JevNexus provides an advisory answer for one bounded repository question. Treat its answer as an investigation lead and confirm it against the source before making a change. The evidence preview is available without a Jev call.
+JevNexus gathers bounded code context through GitNexus so Jev can make an advisory recommendation about one repository question. Treat the recommendation as an investigation lead and confirm it against the source before making a change. This document records how collection works and preserves the historical comparison.
 
 ## Collection and limits
 
@@ -14,17 +14,20 @@ Default bounds are three searches, six context lookups, one graph hop, two in-fl
 
 The bundle hash is calculated from canonical JSON and excludes timing and run IDs. Metrics report a conservative token estimate using 2.5 characters per token, plus actual input/output token counts after live Jev calls. The installed TypeSafe SDK does not expose an authoritative context-window limit, so the character budget is not a model guarantee.
 
-## Preview and decision
+## Decision and diagnostic interface
 
 From the JevNexus project root:
 
 ```powershell
-node src/cli.mjs evidence --question "Which module owns this decision?"
+node src/cli.mjs decide `
+  --question "Where does this repository connect GitNexus retrieval to Jev?" `
+  --decision-type choice `
+  --choices-json '["the decision layer","the retrieval layer","insufficient evidence"]'
 ```
 
-The `repo_evidence` MCP tool does the same collection without calling Jev. Set `recordDiagnostics: true` to write raw GitNexus results, selected evidence, omissions, source revision, and timings beneath ignored `artifacts/evidence/`. Diagnostic files can contain repository source text and should remain local unless their contents are reviewed before sharing.
+The primary interface is `repo_decide`, which performs the collection and asks Jev. `repo_evidence` exists as a secondary troubleshooting tool; it returns selected context without a Jev request. Set `recordDiagnostics: true` to write raw GitNexus results, selected evidence, omissions, source revision, and timings beneath ignored `artifacts/evidence/`. Diagnostic files can contain repository source text and should remain local unless their contents are reviewed before sharing.
 
-`repo_decide` uses the same bundle, and requires both a clean repository snapshot and a GitNexus index whose commit matches that snapshot. A preview remains available for dirty or stale sources, with freshness reported explicitly.
+`repo_decide` requires both a clean repository snapshot and a GitNexus index whose commit matches that snapshot. Retrieval diagnostics can report freshness for dirty or stale sources, but they do not produce a Jev recommendation.
 
 ## Refresh
 

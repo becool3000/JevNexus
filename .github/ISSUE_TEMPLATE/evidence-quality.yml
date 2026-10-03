@@ -1,16 +1,16 @@
-name: Evidence retrieval quality
-description: Report incomplete or irrelevant evidence from a repository preview.
-title: "[Evidence]: "
+name: Jev recommendation quality
+description: Report a Jev recommendation that did not address the repository question.
+title: "[Recommendation]: "
 body:
   - type: markdown
     attributes:
       value: |
-        Do not include API keys, private source code, or a complete evidence bundle. Share only a sanitized question, bundle hash, paths or symbol names that are safe to disclose, and brief excerpts if permitted.
+        Do not include API keys, private source code, or complete diagnostic bundles. Share only a sanitized question and details that are safe to disclose.
   - type: input
     id: versions
     attributes:
-      label: JevNexus and GitNexus versions
-      description: Include the JevNexus revision and GitNexus version.
+      label: JevNexus, GitNexus, and agent host versions
+      description: Include versions when known.
     validations:
       required: true
   - type: textarea
@@ -21,21 +21,16 @@ body:
     validations:
       required: true
   - type: input
-    id: bundle-hash
+    id: decision
     attributes:
-      label: Evidence bundle hash
-      description: Optional; copy from a `repo_evidence` preview.
-  - type: textarea
-    id: expected
-    attributes:
-      label: Expected source area or symbols
-      description: Briefly explain what source you expected the collector to find and why.
+      label: Jev recommendation
+      description: Share Jev's choice or a short sanitized summary. Omit private repository details.
     validations:
       required: true
   - type: textarea
-    id: actual
+    id: context
     attributes:
-      label: Actual result and omissions
-      description: Include safe symbol names, paths, and a short sanitized excerpt. Do not paste the full bundle.
+      label: What was wrong or missing?
+      description: Explain what you expected and why the recommendation did not help. Do not paste source code or a full evidence bundle.
     validations:
       required: true
