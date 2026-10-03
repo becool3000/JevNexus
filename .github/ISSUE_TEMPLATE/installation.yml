@@ -1,0 +1,47 @@
+name: Installation or startup problem
+description: Report a problem installing, indexing, or starting JevNexus.
+title: "[Install]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include API keys, credentials, private source code, or complete evidence bundles. Remove private paths and redact sensitive output before submitting.
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating system
+      placeholder: Windows 11, macOS, or Linux distribution
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: Include the output of `node --version`.
+    validations:
+      required: true
+  - type: input
+    id: gitnexus-version
+    attributes:
+      label: GitNexus version
+      description: Include the installed package version if known.
+  - type: input
+    id: command
+    attributes:
+      label: Command that failed
+      placeholder: npm ci, npm run index, or an MCP startup command
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and sanitized output
+      description: Include the relevant error lines only. Remove credentials and private paths.
+    validations:
+      required: true

@@ -1,5 +1,7 @@
 # JevNexus Evidence Collection
 
+This document records the collector design and an earlier repository comparison. See [Getting started](GettingStarted.md) for first use and [the tool reference](Reference.md) for MCP and HTTP request details.
+
 ## Advisory use
 
 JevNexus provides an advisory answer for one bounded repository question. Treat its answer as an investigation lead and confirm it against the source before making a change. The evidence preview is available without a Jev call.
@@ -34,7 +36,7 @@ npm run index
 
 For another checkout, run the GitNexus analyzer with that checkout as its working directory. Confirm `gitnexus status --json` reports `status: up-to-date` and that `index.commit` matches the checkout's `HEAD` before making a Jev decision. Index databases and raw diagnostic captures remain ignored by Git.
 
-## Comparison record
+## Historical comparison record (October 2, 2026)
 
 The first JevNexus trial on CityBuilder used a different source revision (`eb78ea60734849ff0fbab0d95df08eacb87f3f19`) and returned **Simulation controller** at confidence **0.29**. The current comparison is recorded separately against CityBuilder revision `e86d985dea70b3fbee1f62757c0f10018a2c39c3`; those different revisions are not treated as a controlled before/after result.
 

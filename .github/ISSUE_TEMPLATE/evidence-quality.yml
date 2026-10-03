@@ -1,0 +1,41 @@
+name: Evidence retrieval quality
+description: Report incomplete or irrelevant evidence from a repository preview.
+title: "[Evidence]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include API keys, private source code, or a complete evidence bundle. Share only a sanitized question, bundle hash, paths or symbol names that are safe to disclose, and brief excerpts if permitted.
+  - type: input
+    id: versions
+    attributes:
+      label: JevNexus and GitNexus versions
+      description: Include the JevNexus revision and GitNexus version.
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Sanitized repository question
+      description: Remove project or customer names that should remain private.
+    validations:
+      required: true
+  - type: input
+    id: bundle-hash
+    attributes:
+      label: Evidence bundle hash
+      description: Optional; copy from a `repo_evidence` preview.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected source area or symbols
+      description: Briefly explain what source you expected the collector to find and why.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result and omissions
+      description: Include safe symbol names, paths, and a short sanitized excerpt. Do not paste the full bundle.
+    validations:
+      required: true
