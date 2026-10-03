@@ -37,7 +37,7 @@ After changing indexed source, refresh the derived GitNexus index from the targe
 npm run index
 ```
 
-For another checkout, run the GitNexus analyzer with that checkout as its working directory. Confirm `gitnexus status --json` reports `status: up-to-date` and that `index.commit` matches the checkout's `HEAD` before making a Jev decision. Index databases and raw diagnostic captures remain ignored by Git.
+For another checkout, run the GitNexus analyzer with that checkout as its working directory. Confirm `gitnexus status --json` reports an index whose `index.commit` matches the checkout's `git rev-parse HEAD` before making a Jev decision. Index databases and raw diagnostic captures remain ignored by Git.
 
 ## Historical comparison record (October 2, 2026)
 
