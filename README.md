@@ -1,42 +1,39 @@
 # JevNexus
 
-JevNexus helps a coding assistant answer one focused question about a codebase using source evidence. It searches the GitNexus index, follows likely symbols through their callers and callees, and gives Jev a bounded evidence bundle for a typed decision.
+JevNexus gives Jev useful context about a code repository so Jev can return a focused, source-grounded recommendation. GitNexus works behind the scenes to find relevant code; JevNexus packages that context and sends it with your question to Jev.
 
-For example: **“Where is repository evidence gathered before a Jev decision?”** You can preview the answer and its source references locally before connecting an API key.
+For example, ask Jev: **“Which part of this repository should I inspect first to understand how vehicle movement conflicts are resolved?”** JevNexus gathers relevant code and relationships, then Jev returns a recommendation with supporting context.
 
-## Try an evidence preview
+## Install with your coding agent
 
-Requirements: Git and Node.js **22.18.0–22.x, or 24.11.0 and newer**. GitNexus is installed locally from the lockfile; no global install is needed.
+**This is the recommended setup.** First make sure `TYPESAFE_API_KEY` is securely available in the environment inherited by your coding agent. Then paste this prompt while the agent is working in the repository you want Jev to reason about. Repeat it for another repository so JevNexus indexes and targets that project too.
 
-```powershell
-git clone https://github.com/becool3000/JevNexus.git
-cd JevNexus
-npm ci
-npm run index
-npm run repo:evidence -- --question "Where is repository evidence gathered before a Jev decision?"
+```text
+Set up JevNexus for this chat's current Git repository so I can ask Jev for recommendations.
+
+Check that TYPESAFE_API_KEY is available to this agent without printing its value. If missing, stop and tell me to configure it securely. Find this repository's root. Clone JevNexus outside the project and run `npm ci` there to install all dependencies, including GitNexus. From the project root, run the installed CLI:
+
+`node "<JevNexus>/node_modules/gitnexus/dist/cli/index.js" analyze --index-only --name <repo-alias>`
+
+Configure MCP to use the JevNexus install, set `JEVNEXUS_REPO_ROOT` to this project and `GITNEXUS_REPO` to the same alias, and inherit the API key securely. Preserve existing settings and follow this agent's official setup instructions.
+
+Use Git and Node.js 22.18+ (22.x) or 24.11+. If missing, use official installers. Do not expose the key, write it to files, or run tests or a Jev request during setup. Finish by confirming the index is current, MCP is configured, and whether I need to reload this chat.
 ```
 
-This creates a local `.gitnexus/` index, then prints a JSON preview. A successful preview includes `ok: true`, index freshness, candidate symbols, source locations, relationships, and any retrieval limits or omissions. Candidate ranking depends on the repository and question. The preview does not call Jev and does not require `TYPESAFE_API_KEY`.
-
-![Selected fields from a real PowerShell evidence preview on Node.js 22.20.0](Docs/images/quickstart-preview.png)
-
-The image shows selected fields from a successful fresh-clone run at revision `282b0f95`; machine-local paths and the rest of the JSON are omitted.
-
-The index is derived local data. Refresh it after changing source files; `npm run index` uses GitNexus `--index-only` so it does not write agent instructions or skills into the checkout.
+Paste it while your agent is working in the repository you want Jev to analyze. The agent needs terminal and MCP configuration access. See the [setup guide](Docs/GettingStarted.md) if it cannot configure MCP itself.
 
 ## Next steps
 
-- [Let your coding agent set it up](Docs/GettingStarted.md#agent-assisted-setup): copy a prompt that installs prerequisites, indexes JevNexus, verifies a local preview, and configures MCP where supported.
-- [Preview and decision guide](Docs/GettingStarted.md): Codex MCP setup, data flow, and troubleshooting.
+- [Jev setup and usage guide](Docs/GettingStarted.md): manual TypeSafe key setup, Codex MCP configuration, data flow, and troubleshooting.
 - [Tool and service reference](Docs/Reference.md): MCP schemas, HTTP requests, and historical benchmarks.
 - [Evidence collection and comparison notes](Docs/JevNexus.md): collection limits, known retrieval limitations, and the CityBuilder comparison.
-- To ask Jev for a decision, configure a TypeSafe API key as an environment variable, then use `repo_decide`. Decisions require a clean checkout and a current index. Jev receives the question, choices, and selected source evidence.
+- `repo_decide` is the primary workflow. `repo_evidence` is a supporting diagnostic for inspecting what context JevNexus selected.
 
-Indexing and preview collection run locally. Preview output contains repository evidence. A Jev decision sends the question, choices, and selected evidence to TypeSafe. Diagnostics are opt-in, remain local by default, and may contain source code. Review them before sharing.
+Repository indexing and retrieval run locally. A Jev decision sends the question, choices, and selected repository context to TypeSafe. Diagnostics are opt-in, remain local by default, and may contain source code. Review them before sharing.
 
-## Dependencies and terms
+## License and dependencies
 
-JevNexus currently has no `LICENSE` file. GitNexus 1.6.12, the installed dependency, declares the [PolyForm Noncommercial License](https://www.npmjs.com/package/gitnexus). Review the terms of JevNexus and its dependencies before reuse, especially for commercial use; no license has been selected for this project.
+JevNexus-authored code is licensed under the [MIT License](LICENSE). This license covers the original work in this repository; third-party dependencies retain their own terms. In particular, GitNexus 1.6.12 is installed as a dependency under the [PolyForm Noncommercial License](https://polyformproject.org/licenses/noncommercial/1.0.0). Review those separate terms before commercial use.
 
 - [GitNexus repository and documentation](https://github.com/abhigyanpatwari/GitNexus)
 - [TypeSafe JavaScript SDK guide](https://www.typesafeai.org/guides/jev-typescript)
