@@ -26,6 +26,7 @@ The index is derived local data. Refresh it after changing source files; `npm ru
 
 ## Next steps
 
+- [Let your coding agent set it up](Docs/GettingStarted.md#agent-assisted-setup): copy a prompt that installs prerequisites, indexes JevNexus, verifies a local preview, and configures MCP where supported.
 - [Preview and decision guide](Docs/GettingStarted.md): Codex MCP setup, data flow, and troubleshooting.
 - [Tool and service reference](Docs/Reference.md): MCP schemas, HTTP requests, and historical benchmarks.
 - [Evidence collection and comparison notes](Docs/JevNexus.md): collection limits, known retrieval limitations, and the CityBuilder comparison.
